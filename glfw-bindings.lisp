@@ -99,7 +99,7 @@
 ;;
 ;; It might become necessary to do this for other implementations, too.
 
-(defparameter *saved-lisp-fpu-modes* :unset)
+(defparameter *saved-lisp-fpu-modes* nil)
 
 (defmacro with-float-traps-saved-and-masked (&body body)
   "Turn off floating point traps and stash them
@@ -119,15 +119,11 @@ this is not required for the current implementation."
 of the given BODY. Expands into a PROGN if this is not required
 for the current implementation."
   #+(and sbcl darwin)
-      (with-gensyms (modes)
-        `(let ((,modes (sb-int:get-floating-point-modes)))
-           (unwind-protect 
-                (progn
-                  (when (not (eq *saved-lisp-fpu-modes* :unset))
-                    (apply #'sb-int:set-floating-point-modes
-                           *saved-lisp-fpu-modes*))
-                  ,@body)
-             (apply #'sb-int:set-floating-point-modes ,modes))))
+      (with-gensyms (current-modes)
+        `(let ((,current-modes (sb-int:get-floating-point-modes)))
+           (apply #'sb-int:set-floating-point-modes *saved-lisp-fpu-modes*)
+           ,@body
+           (apply #'sb-int:set-floating-point-modes ,current-modes)))
   #-(and sbcl darwin)
      `(progn ,@body))
 
